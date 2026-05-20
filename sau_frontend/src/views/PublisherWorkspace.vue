@@ -33,6 +33,15 @@
       </div>
     </section>
 
+    <el-alert
+      v-if="apiOffline"
+      class="api-alert"
+      title="演示模式：当前页面未连接后端 API，发布和登录需要配置 VITE_API_BASE_URL。"
+      type="warning"
+      :closable="false"
+      show-icon
+    />
+
     <section class="flow-strip">
       <div class="flow-step done">
         <span>1</span>
@@ -292,6 +301,7 @@ import { platformApi } from '@/api/platform'
 const loading = ref(false)
 const publishing = ref(false)
 const loggingIn = ref(false)
+const apiOffline = ref(false)
 const loginDialogVisible = ref(false)
 const platforms = ref([])
 const accounts = ref([])
@@ -323,6 +333,14 @@ const selectedTargets = reactive({
   tencent: { enabled: false, accountName: '', shortTitle: '', draft: false },
   bilibili: { enabled: false, accountName: '', tid: '' }
 })
+
+const fallbackPlatforms = [
+  { key: 'douyin', label: '抖音', video: true, note: true, schedule: true, web_login: true, status: 'stable' },
+  { key: 'kuaishou', label: '快手', video: true, note: true, schedule: true, web_login: true, status: 'stable' },
+  { key: 'xiaohongshu', label: '小红书', video: true, note: true, schedule: true, web_login: true, status: 'stable' },
+  { key: 'tencent', label: '视频号', video: true, note: false, schedule: true, web_login: true, status: 'beta' },
+  { key: 'bilibili', label: 'Bilibili', video: true, note: false, schedule: true, web_login: false, status: 'stable' }
+]
 
 const videoMaterials = computed(() => materials.value.filter((item) => item.kind === 'video'))
 const thumbnailMaterials = computed(() => materials.value.filter((item) => item.kind === 'thumbnail'))
@@ -368,6 +386,13 @@ const loadInitialData = async () => {
     accounts.value = accountRes.data || []
     materials.value = materialRes.data || []
     jobs.value = jobRes.data || []
+    apiOffline.value = false
+  } catch (error) {
+    apiOffline.value = true
+    platforms.value = fallbackPlatforms
+    accounts.value = []
+    materials.value = []
+    jobs.value = []
   } finally {
     loading.value = false
   }
@@ -401,6 +426,11 @@ const validatePublish = () => {
 }
 
 const submitPublish = async () => {
+  if (apiOffline.value) {
+    ElMessage.warning('当前演示站没有连接后端 API，请在本地或配置后端域名后发布')
+    return
+  }
+
   const error = validatePublish()
   if (error) {
     ElMessage.warning(error)
@@ -429,6 +459,11 @@ const submitPublish = async () => {
 }
 
 const startLogin = async () => {
+  if (apiOffline.value) {
+    ElMessage.warning('当前演示站没有连接后端 API，请在本地或配置后端域名后登录')
+    return
+  }
+
   if (!loginForm.accountName.trim()) {
     ElMessage.warning('账号名称不能为空')
     return
@@ -591,6 +626,11 @@ onMounted(loadInitialData)
   strong {
     font-size: 22px;
   }
+}
+
+.api-alert {
+  margin-bottom: 18px;
+  border-radius: 8px;
 }
 
 .flow-strip {

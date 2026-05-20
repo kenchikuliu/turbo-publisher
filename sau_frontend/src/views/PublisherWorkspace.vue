@@ -376,6 +376,15 @@ const normalizePayloadTargets = () => {
 const loadInitialData = async () => {
   loading.value = true
   try {
+    if (window.location.hostname.endsWith('github.io')) {
+      apiOffline.value = true
+      platforms.value = fallbackPlatforms
+      accounts.value = []
+      materials.value = []
+      jobs.value = []
+      return
+    }
+
     const [platformRes, accountRes, materialRes, jobRes] = await Promise.all([
       platformApi.getPlatforms(),
       platformApi.getAccounts(),

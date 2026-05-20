@@ -37,6 +37,7 @@ jobs:
         run: npm run build
         env:
           VITE_API_BASE_URL: /api
+          VITE_BASE_PATH: /turbo-publisher/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

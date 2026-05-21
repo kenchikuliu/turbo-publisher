@@ -353,6 +353,22 @@ const accountsByPlatform = (platformKey) => {
   return accounts.value.filter((account) => account.platform === platformKey)
 }
 
+const isStaticDemoHost = () => {
+  if (typeof window === 'undefined') return false
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim()
+  const hasExternalApi = /^https?:\/\//i.test(apiBaseUrl)
+  const hostname = window.location.hostname
+  return !hasExternalApi && (hostname.endsWith('github.io') || hostname.endsWith('.pages.dev'))
+}
+
+const applyOfflineFallback = () => {
+  apiOffline.value = true
+  platforms.value = fallbackPlatforms
+  accounts.value = []
+  materials.value = []
+  jobs.value = []
+}
+
 const normalizePayloadTargets = () => {
   return Object.entries(selectedTargets)
     .filter(([, target]) => target.enabled)
@@ -376,12 +392,8 @@ const normalizePayloadTargets = () => {
 const loadInitialData = async () => {
   loading.value = true
   try {
-    if (window.location.hostname.endsWith('github.io')) {
-      apiOffline.value = true
-      platforms.value = fallbackPlatforms
-      accounts.value = []
-      materials.value = []
-      jobs.value = []
+    if (isStaticDemoHost()) {
+      applyOfflineFallback()
       return
     }
 
@@ -397,17 +409,20 @@ const loadInitialData = async () => {
     jobs.value = jobRes.data || []
     apiOffline.value = false
   } catch (error) {
-    apiOffline.value = true
-    platforms.value = fallbackPlatforms
-    accounts.value = []
-    materials.value = []
-    jobs.value = []
+    applyOfflineFallback()
   } finally {
     loading.value = false
   }
 }
 
 const uploadAsset = async (options, kind) => {
+  if (apiOffline.value) {
+    const error = new Error('演示站未连接后端 API')
+    ElMessage.warning('当前演示站没有连接后端 API，请在本地或配置后端域名后上传')
+    options.onError?.(error)
+    return
+  }
+
   const formData = new FormData()
   formData.append('file', options.file)
   formData.append('kind', kind)
